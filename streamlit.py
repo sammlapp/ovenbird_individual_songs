@@ -6,9 +6,11 @@ if streamlit:
 else:
     streamlit = None
 
-
+from PIL import Image
 from datetime import date
 import numpy as np
+
+import pydeck as pdk
 
 # st.write(f"## Ovenbird song map")
 
@@ -95,27 +97,29 @@ def parse_list_of_lists(cell):
 palette = sns.color_palette(palette="Dark2") + sns.color_palette("pastel")
 
 
-splits_dir = "/home/sml161/loca26_bird_volume/outputs/7_contrastive_iid/splits"
-dataset_path = "/media/sml161/BULocaData/SBT/2016/V1"
-val_df = pd.read_csv(f"{splits_dir}/val_labels_2_annotators.csv")
-test_df = pd.read_csv(f"{splits_dir}/test_labels_2_annotators.csv")
+# splits_dir = "/home/sml161/loca26_bird_volume/outputs/7_contrastive_iid/splits"
+dataset_path = Path("./data")
+# "/media/sml161/BULocaData/SBT/2016/V1"
+# val_df = pd.read_csv(f"{splits_dir}/val_labels_2_annotators.csv")
+# test_df = pd.read_csv(f"{splits_dir}/test_labels_2_annotators.csv")
 
-labels = pd.concat([val_df, test_df])
+labels = pd.read_csv(dataset_path / "labeled_clips.csv")  # pd.concat([val_df, test_df])
+locations_df = pd.read_csv(dataset_path / "SBT_Stations_2016_rtk_points.csv")
+
 # only use the nearest clips as examples
 # (from sets of clips at different distances, same localized event)
-labels = labels[labels["nearest"]]
-labels = pd.concat([val_df, test_df])
+labels = labels[labels["nearest_recorder"]]
 
 label_column = st.segmented_control(
-    "Annotator:",
-    options=["aiid_label_cc", "aiid_label_sl"],
-    default="aiid_label_cc",
+    "Select label type:",
+    options=["aiid_label", "aiid_label_cc", "aiid_label_sl"],
+    default="aiid_label",
+    help="Display final labels, or labels from one annotator (CC or SL), or automated ID labels.",
 )
 
 labels = labels[labels[label_column].apply(lambda x: x not in ("n", "u"))]
 labels[label_column] = labels[label_column].astype(int)
 labels["name"] = labels[label_column].apply(lambda x: names[x])
-
 
 all_arrays = labels["array"].unique()
 
@@ -131,8 +135,7 @@ if streamlit:
 else:
     array = "SBT-3-15"
 
-array_metadata = pd.read_csv(f"{dataset_path}/{array}/{array}_rtk_points.csv")
-
+array_metadata = locations_df[locations_df["array_folder_name"] == array].copy()
 utm_zone = array_metadata["UTM_ZONE"].values[0]
 array_metadata["Latitude"], array_metadata["Longitude"] = utm.to_latlon(
     array_metadata["EASTING"], array_metadata["NORTHING"], utm_zone, "N"
@@ -141,8 +144,8 @@ array_metadata["name"] = "recorder"
 
 array_origin = array_metadata["EASTING"].min(), array_metadata["NORTHING"].min()
 array_dets = labels[labels["array"] == array].copy()
-array_dets["EASTING"] = array_dets["x"] + array_origin[0]
-array_dets["NORTHING"] = array_dets["y"] + array_origin[1]
+array_dets["EASTING"] = array_dets["bird_position_x"] + array_origin[0]
+array_dets["NORTHING"] = array_dets["bird_position_y"] + array_origin[1]
 
 array_dets["Latitude"], array_dets["Longitude"] = utm.to_latlon(
     array_dets["EASTING"], array_dets["NORTHING"], utm_zone, "N"
@@ -176,26 +179,10 @@ all_points["rgb255"] = None
 
 clip_dur = 3
 
-import librosa
-from PIL import Image, ImageColor
-
 
 def rgb_to_hex(color_tuple):
     c = (np.array(color_tuple) * 255).astype("uint8")
     return "#{:02x}{:02x}{:02x}".format(*c)
-
-
-# if streamlit:
-# st.map(
-#     all_points,
-#     latitude="Latitude",
-#     longitude="Longitude",
-#     color="color",
-#     size="size",
-#     zoom=16,
-# )
-
-import pydeck as pdk
 
 
 # Create Pydeck Layer for Map
@@ -279,8 +266,8 @@ for indv, dets in array_dets.groupby(label_column):
 
         for i, row in dets.iterrows():
             show_audio(
-                file=row.file,
-                start=row.song_center_time - clip_dur / 2,
+                file=dataset_path / row.rel_path,
+                start=10 / 2 - clip_dur / 2,
                 duration=clip_dur,
             )
 
