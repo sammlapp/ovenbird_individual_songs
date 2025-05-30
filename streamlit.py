@@ -103,37 +103,53 @@ dataset_path = Path("./data")
 # val_df = pd.read_csv(f"{splits_dir}/val_labels_2_annotators.csv")
 # test_df = pd.read_csv(f"{splits_dir}/test_labels_2_annotators.csv")
 
-labels = pd.read_csv(dataset_path / "labeled_clips.csv")  # pd.concat([val_df, test_df])
+labels = pd.read_csv(dataset_path / "all_labels_with_clusters.csv")
 locations_df = pd.read_csv(dataset_path / "SBT_Stations_2016_rtk_points.csv")
 
 # only use the nearest clips as examples
 # (from sets of clips at different distances, same localized event)
-labels = labels[labels["nearest_recorder"]]
+labels = labels[labels["nearest_recorder"] == True]
 
-label_column = st.segmented_control(
-    "Select label type:",
-    options=["aiid_label", "aiid_label_cc", "aiid_label_sl"],
-    default="aiid_label",
-    help="Display final labels, or labels from one annotator (CC or SL), or automated ID labels.",
-)
+# array_metadata = pd.read_csv(f"{dataset_path}/{array}/{array}_rtk_points.csv")
+# array_metadata["x"] = array_metadata["EASTING"] - array_metadata["EASTING"].min()
+# array_metadata["y"] = array_metadata["NORTHING"] - array_metadata["NORTHING"].min()
+
+
+cols = st.columns(2)
+label_names = {
+    "aiid_label": "Human annotated individual",
+    "ovenbird_cluster_labels": "custom Ovenbird feature extractor",
+    "baseline_resnet18_cluster_labels": "ResNet18 baseline",
+    "hawkears_cluster_labels": "HawkEars",
+    "birdnet_cluster_labels": "BirdNET",
+}
+with cols[0]:
+
+    label_column = st.selectbox(
+        "Select annotated label or automated ID label:",
+        options=[
+            "aiid_label",
+            "ovenbird_cluster_labels",
+            "baseline_resnet18_cluster_labels",
+            "hawkears_cluster_labels",
+            "birdnet_cluster_labels",
+        ],
+        format_func=lambda x: label_names[x],
+        index=0,
+        key="label_column",
+        help="Display human annotated labels or automated ID labels from different models.",
+    )
 
 labels = labels[labels[label_column].apply(lambda x: x not in ("n", "u"))]
 labels[label_column] = labels[label_column].astype(int)
 labels["name"] = labels[label_column].apply(lambda x: names[x])
 
 all_arrays = labels["array"].unique()
-
-# array_metadata = pd.read_csv(f"{dataset_path}/{array}/{array}_rtk_points.csv")
-# array_metadata["x"] = array_metadata["EASTING"] - array_metadata["EASTING"].min()
-# array_metadata["y"] = array_metadata["NORTHING"] - array_metadata["NORTHING"].min()
-
-if streamlit:
+with cols[1]:
     array = st.selectbox(
         "Select localization grid:",
         all_arrays,
     )
-else:
-    array = "SBT-3-15"
 
 array_metadata = locations_df[locations_df["array_folder_name"] == array].copy()
 utm_zone = array_metadata["UTM_ZONE"].values[0]
