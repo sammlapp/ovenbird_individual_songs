@@ -5,4 +5,4 @@ utm
 seaborn
 numpy
 pandas
-matplotlibw
+matplotlib
