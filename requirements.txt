@@ -1,9 +1,8 @@
 streamlit
-opensoundscape>=0.11.0
+opensoundscape==0.11.0
 streamlit-extras
 utm
 seaborn
 numpy
 pandas
 matplotlib
-opencv-python>=4.10.0
