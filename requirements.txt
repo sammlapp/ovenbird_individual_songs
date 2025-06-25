@@ -1,9 +1,8 @@
 streamlit
-opensoundscape>=0.11.0
+git+https://github.com/kitzeslab/opensoundscape.git@develop
 streamlit-extras
 utm
 seaborn
 numpy
 pandas
 matplotlib
-opencv-python
