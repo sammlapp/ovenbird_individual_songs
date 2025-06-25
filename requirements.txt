@@ -6,3 +6,4 @@ seaborn
 numpy
 pandas
 matplotlib
+opencv-python
