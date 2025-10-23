@@ -103,6 +103,8 @@ dataset_path = Path("./data")
 # val_df = pd.read_csv(f"{splits_dir}/val_labels_2_annotators.csv")
 # test_df = pd.read_csv(f"{splits_dir}/test_labels_2_annotators.csv")
 
+import pandas as pd
+
 labels = pd.read_csv(dataset_path / "all_labels_with_clusters.csv")
 locations_df = pd.read_csv(dataset_path / "SBT_Stations_2016_rtk_points.csv")
 
@@ -114,6 +116,39 @@ labels = labels[labels["nearest_recorder"] == True]
 # array_metadata["x"] = array_metadata["EASTING"] - array_metadata["EASTING"].min()
 # array_metadata["y"] = array_metadata["NORTHING"] - array_metadata["NORTHING"].min()
 
+st.write(f"## Ovenbird song map")
+# instructions
+with st.expander("Info and Instructions"):
+    st.write(
+        """
+    This web page displays Ovenbird songs with individual labels and spatial locations on
+    13 acoustic localization grids from Alberta, Canada. See the preprint for details:
+
+    https://www.biorxiv.org/content/10.1101/2025.06.26.661638v1.full.pdf 
+
+    Colors in the map represent individual labels, as assigned by human annotators or
+    automated individual ID models. The "custom Ovenbird feature extractor" is our 
+    model described in the preprint, and creates very similar labels to the human annotators.
+
+    Colors recycle for each array (no individuals occur across multiple arrays)
+
+    Individual bird names are randomly generated from adjective-noun pairs.
+
+    #### Using the controls: 
+    
+    Use the first dropdown menu to select human or automated individual labels.
+
+    Use the second dropdown to select a localization grid (array).
+
+    Click and drag on the map to pan around, and use the scroll wheel to zoom in and out.
+
+    Click on points in the map to listen to the audio clip corresponding to that point.
+
+    Scroll down to see more audio examples from each individual on that array,
+    with spectrograms and real-time or slowed-down playback.
+            
+    """
+    )
 
 cols = st.columns(2)
 label_names = {
@@ -233,6 +268,7 @@ terrain_map = pdk.Deck(
 event = st.pydeck_chart(
     terrain_map, on_select="rerun", selection_mode="single-object", height=400
 )
+st.write("Click on points in the map to listen to the corresponding audio clip.")
 
 # if user clicked on a point, show that song:
 if "scatterplot-layer" in event.selection["objects"]:
@@ -246,7 +282,7 @@ if "scatterplot-layer" in event.selection["objects"]:
 
     st.header(f"selected song: {click_data['name']}")
     show_audio(
-        file=click_data["file"],
+        file=dataset_path / click_data["rel_path"],
         start=click_data["song_center_time"] - clip_dur / 2,
         duration=clip_dur,
     )
