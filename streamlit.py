@@ -152,7 +152,8 @@ with st.expander("Info and Instructions"):
 
 cols = st.columns(2)
 label_names = {
-    "aiid_label": "Human annotated individual",
+    "final_label": "Human-annotated individual",
+    "song_based_label": "Human-annotated (w/o spatial info)",
     "ovenbird_cluster_labels": "custom Ovenbird feature extractor",
     "baseline_resnet18_cluster_labels": "ResNet18 baseline",
     "hawkears_cluster_labels": "HawkEars",
@@ -163,7 +164,8 @@ with cols[0]:
     label_column = st.selectbox(
         "Select annotated label or automated ID label:",
         options=[
-            "aiid_label",
+            "final_label",
+            "song_based_label",
             "ovenbird_cluster_labels",
             "baseline_resnet18_cluster_labels",
             "hawkears_cluster_labels",
@@ -208,7 +210,10 @@ array_metadata["color"] = [(0, 0, 0, 0.6)] * len(array_metadata)
 array_metadata["size"] = 1
 # color by aiid label
 array_dets[label_column] = array_dets[label_column].astype(int)
-array_dets["aiid_index"] = array_dets[label_column] - array_dets[label_column].min()
+aiid_counter_map = {
+    label: i for i, label in enumerate(array_dets[label_column].unique())
+}
+array_dets["aiid_index"] = array_dets[label_column].map(aiid_counter_map)
 array_dets["color"] = array_dets["aiid_index"].apply(
     lambda x: tuple(list(palette[x % len(palette)]) + [0.6])
 )
@@ -247,7 +252,7 @@ layer = pdk.Layer(
     id="scatterplot-layer",
 )
 
-# Use Pydeck with a terrain/satellite map
+# Use Pydeck with light background for visibility
 terrain_map = pdk.Deck(
     layers=[layer],
     initial_view_state=pdk.ViewState(
@@ -256,10 +261,7 @@ terrain_map = pdk.Deck(
         zoom=16,
         pitch=0,
     ),
-    map_style="mapbox://styles/mapbox/satellite-v12",  # Change this for terrain
-    api_keys={
-        "mapbox": "pk.eyJ1Ijoic2FtbGFwcCIsImEiOiJjbTZxejh2aDEwNGUxMmpxNDdicmg4Z292In0.I2c3-nXIznc-etKNdQLENQ"
-    },
+    map_style="light",
     tooltip={"text": "{name}"},
 )
 
