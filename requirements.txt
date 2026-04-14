@@ -6,3 +6,4 @@ seaborn
 numpy
 pandas
 matplotlib
+crowsetta>=5.1.3
