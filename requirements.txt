@@ -1,5 +1,5 @@
 streamlit
-opensoundscape==0.11.0
+opensoundscape==0.12.1
 streamlit-extras
 utm
 seaborn
