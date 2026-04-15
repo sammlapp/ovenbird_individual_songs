@@ -1,3 +1,10 @@
+# mask the pytorch_grad_cam package import, we don't need it and importing causes an error
+import sys
+from unittest.mock import MagicMock
+
+sys.modules["pytorch_grad_cam"] = MagicMock()
+
+
 streamlit = True
 if streamlit:
     import streamlit as st
