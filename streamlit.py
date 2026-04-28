@@ -1,36 +1,46 @@
-# mask the pytorch_grad_cam package import, we don't need it and importing causes an error
+# Provide a lightweight shim for optional pytorch_grad_cam imports used by opensoundscape.
+# Streamlit deployment does not need CAM features, but opensoundscape imports them at module load.
 import sys
-from unittest.mock import MagicMock
-
-sys.modules["pytorch_grad_cam"] = MagicMock()
+import types
 
 
-streamlit = True
-if streamlit:
-    import streamlit as st
-    from streamlit_extras.add_vertical_space import add_vertical_space
+def _install_pytorch_grad_cam_shim():
+    pytorch_grad_cam = types.ModuleType("pytorch_grad_cam")
+    pytorch_grad_cam.__path__ = []
+    utils_module = types.ModuleType("pytorch_grad_cam.utils")
+    utils_module.__path__ = []
+    model_targets_module = types.ModuleType("pytorch_grad_cam.utils.model_targets")
+    model_targets_module.ClassifierOutputTarget = object
 
-else:
-    streamlit = None
+    sys.modules.setdefault("pytorch_grad_cam", pytorch_grad_cam)
+    sys.modules.setdefault("pytorch_grad_cam.utils", utils_module)
+    sys.modules.setdefault("pytorch_grad_cam.utils.model_targets", model_targets_module)
+
+
+_install_pytorch_grad_cam_shim()
+
+import pandas as pd
+
+
+import streamlit as st
+from streamlit_extras.add_vertical_space import add_vertical_space
+from streamlit.elements.lib.color_util import ColorTuple
+from typing import cast
 
 from PIL import Image
 from datetime import date
 import numpy as np
 
 import pydeck as pdk
-
-# st.write(f"## Ovenbird song map")
-
 import pandas as pd
 import numpy as np
 import utm
 import seaborn as sns
 
-from opensoundscape import Audio, Spectrogram, CNN, BoxedAnnotations
+from opensoundscape import Audio, Spectrogram
 
 import numpy as np
 import pandas as pd
-from glob import glob
 from pathlib import Path
 
 from matplotlib import pyplot as plt
@@ -40,17 +50,10 @@ def figsize(w, h):
     plt.rcParams["figure.figsize"] = [w, h]
 
 
-figsize(15, 5)  # for big visuals
-from opensoundscape.localization import PositionEstimate
-from opensoundscape.localization.position_estimate import (
-    positions_to_df,
-    df_to_positions,
-)
 import ast
 import re
 import random
 
-from names import nature_adjectives, bird_nouns
 from names import nature_adjectives, bird_nouns
 
 random.seed(2025)
@@ -102,15 +105,8 @@ def parse_list_of_lists(cell):
 
 
 palette = sns.color_palette(palette="Dark2") + sns.color_palette("pastel")
-
-
-# splits_dir = "/home/sml161/loca26_bird_volume/outputs/7_contrastive_iid/splits"
 dataset_path = Path("./data")
-# "/media/sml161/BULocaData/SBT/2016/V1"
-# val_df = pd.read_csv(f"{splits_dir}/val_labels_2_annotators.csv")
-# test_df = pd.read_csv(f"{splits_dir}/test_labels_2_annotators.csv")
 
-import pandas as pd
 
 labels = pd.read_csv(dataset_path / "all_labels_with_clusters.csv")
 locations_df = pd.read_csv(dataset_path / "SBT_Stations_2016_rtk_points.csv")
@@ -227,8 +223,6 @@ array_dets["color"] = array_dets["aiid_index"].apply(
 array_dets["size"] = 3
 all_points = pd.concat([array_metadata, array_dets])
 
-from streamlit.elements.lib.color_util import ColorTuple
-from typing import cast
 
 all_points["rgb255"] = all_points["color"].apply(
     lambda x: cast(ColorTuple, (np.array(x) * 255).astype("uint8"))
